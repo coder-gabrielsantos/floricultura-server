@@ -4,6 +4,8 @@ const Order = require("../models/Order");
 const MAX_ORDERS_PER_BLOCK = 3;
 
 // Create a new order
+const Product = require("../models/Product");
+
 exports.createOrder = async (req, res) => {
     try {
         const {
@@ -18,12 +20,33 @@ exports.createOrder = async (req, res) => {
 
         const clientId = req.user.userId;
 
-        // Check if limit for time block is reached
+        // Check time block limit
         const existingOrders = await Order.countDocuments({ date, timeBlock });
         if (existingOrders >= MAX_ORDERS_PER_BLOCK) {
             return res.status(400).json({
-                message: "Time block is full."
+                message: "Time block is full. Please select another time."
             });
+        }
+
+        // Validate product quantities
+        for (const item of products) {
+            const product = await Product.findById(item.product);
+            if (!product) {
+                return res.status(404).json({ message: "Product not found" });
+            }
+            if (product.stock < item.quantity) {
+                return res.status(400).json({
+                    message: `Insufficient stock for product: ${product.name}`
+                });
+            }
+        }
+
+        // All validations passed, reduce stock
+        for (const item of products) {
+            await Product.findByIdAndUpdate(
+                item.product,
+                { $inc: { stock: -item.quantity } }
+            );
         }
 
         const order = new Order({
@@ -38,7 +61,7 @@ exports.createOrder = async (req, res) => {
         });
 
         await order.save();
-        res.status(201).json({ message: "Order created successfully", order });
+        res.status(201).json({ message: "Order created and stock updated", order });
     } catch (err) {
         res.status(500).json({ message: "Failed to create order", error: err });
     }

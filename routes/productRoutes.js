@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const productController = require("../controllers/productController");
-const { verifyToken, requireAdmin } = require("../middlewares/authMiddleware");
+const { verifyToken, requireAdmin } = require("../middleware/authMiddleware");
 
 // Public: list products
 router.get("/", productController.getAllProducts);

@@ -106,3 +106,30 @@ exports.getAvailableBlocks = async (req, res) => {
         res.status(500).json({ message: "Failed to get available blocks", error: err });
     }
 };
+
+// Update order status (admin only)
+exports.updateOrderStatus = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { status } = req.body;
+
+        const validStatuses = ["pendente", "confirmado", "cancelado", "entregue"];
+        if (!validStatuses.includes(status)) {
+            return res.status(400).json({ message: "Invalid status value" });
+        }
+
+        const order = await Order.findByIdAndUpdate(
+            id,
+            { status },
+            { new: true }
+        ).populate("client", "name");
+
+        if (!order) {
+            return res.status(404).json({ message: "Order not found" });
+        }
+
+        res.json({ message: "Order status updated", order });
+    } catch (err) {
+        res.status(500).json({ message: "Failed to update order status", error: err });
+    }
+};

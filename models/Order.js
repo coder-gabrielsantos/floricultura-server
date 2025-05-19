@@ -40,12 +40,8 @@ const orderSchema = new mongoose.Schema({
         required: true
     },
     address: {
-        street: String,
-        number: String,
-        neighborhood: String,
-        reference: String,
-        complement: String,
-        receiver: String
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Address"
     },
     cardMessage: {
         type: String,
@@ -53,12 +49,13 @@ const orderSchema = new mongoose.Schema({
     },
     paymentMethod: {
         type: String,
-        enum: ["cartao", "pix", "especie"],
+        enum: ["pix", "cartao", "especie"],
         required: true
     },
     status: {
         type: String,
-        enum: ["pendente", "confirmado", "cancelado", "entregue"], default: "pendente"
+        enum: ["pendente", "confirmado", "cancelado", "entregue"],
+        default: "pendente"
     }
 }, {
     timestamps: true

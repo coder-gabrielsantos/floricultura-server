@@ -63,3 +63,46 @@ exports.getOrders = async (req, res) => {
         res.status(500).json({ message: "Failed to fetch orders", error: err });
     }
 };
+
+// Get available time blocks for a specific date
+exports.getAvailableBlocks = async (req, res) => {
+    try {
+        const { date } = req.query;
+
+        if (!date) {
+            return res.status(400).json({ message: "Date is required" });
+        }
+
+        const allBlocks = [
+            "06:00–08:00",
+            "08:00–10:00",
+            "10:00–12:00",
+            "12:00–14:00",
+            "14:00–16:00",
+            "16:00–18:00"
+        ];
+
+        const blockCounts = await Order.aggregate([
+            { $match: { date } },
+            {
+                $group: {
+                    _id: "$timeBlock",
+                    count: { $sum: 1 }
+                }
+            }
+        ]);
+
+        const countMap = {};
+        blockCounts.forEach(block => {
+            countMap[block._id] = block.count;
+        });
+
+        const availableBlocks = allBlocks.filter(block => {
+            return (countMap[block] || 0) < 3;
+        });
+
+        res.json({ date, availableBlocks });
+    } catch (err) {
+        res.status(500).json({ message: "Failed to get available blocks", error: err });
+    }
+};

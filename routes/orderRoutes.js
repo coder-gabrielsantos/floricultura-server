@@ -9,4 +9,7 @@ router.post("/", verifyToken, orderController.createOrder);
 // Get all (admin) or personal orders (client)
 router.get("/", verifyToken, orderController.getOrders);
 
+// Get available time blocks for a given date
+router.get("/available-blocks", orderController.getAvailableBlocks);
+
 module.exports = router;

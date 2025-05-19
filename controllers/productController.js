@@ -3,9 +3,29 @@ const Product = require("../models/Product");
 // Create new product (admin only)
 exports.createProduct = async (req, res) => {
     try {
-        const { name, price, stock, category, description } = req.body;
+        const {
+            name,
+            price,
+            stock,
+            category,
+            description,
+            images // Expect array of { base64, contentType }
+        } = req.body;
 
-        const product = new Product({ name, price, stock, category, description });
+        const imageBuffers = (images || []).map(img => ({
+            data: Buffer.from(img.base64, "base64"),
+            contentType: img.contentType
+        }));
+
+        const product = new Product({
+            name,
+            price,
+            stock,
+            category,
+            description,
+            images: imageBuffers
+        });
+
         await product.save();
 
         res.status(201).json({ message: "Product created successfully", product });

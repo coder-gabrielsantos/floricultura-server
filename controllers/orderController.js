@@ -5,6 +5,7 @@ const MAX_ORDERS_PER_BLOCK = 3;
 
 // Create a new order
 const Product = require("../models/Product");
+const Address = require("../models/Address");
 
 exports.createOrder = async (req, res) => {
     try {
@@ -26,6 +27,21 @@ exports.createOrder = async (req, res) => {
             return res.status(400).json({
                 message: "Time block is full. Please select another time."
             });
+        }
+
+        // Validate deliveryType + address
+        if (deliveryType === "entrega") {
+            if (!address) {
+                return res.status(400).json({
+                    message: "Address is required for delivery orders"
+                });
+            }
+
+            const savedAddress = await Address.findOne({ _id: address, client: clientId });
+
+            if (!savedAddress) {
+                return res.status(404).json({ message: "Address not found or not authorized" });
+            }
         }
 
         // Validate product quantities
@@ -55,13 +71,13 @@ exports.createOrder = async (req, res) => {
             date,
             timeBlock,
             deliveryType,
-            address,
+            address: deliveryType === "entrega" ? address : null,
             cardMessage,
             paymentMethod
         });
 
         await order.save();
-        res.status(201).json({ message: "Order created and stock updated", order });
+        res.status(201).json({ message: "Order created successfully", order });
     } catch (err) {
         res.status(500).json({ message: "Failed to create order", error: err });
     }

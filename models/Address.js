@@ -19,7 +19,8 @@ const addressSchema = new mongoose.Schema({
         required: true
     },
     reference: {
-        type: String
+        type: String,
+        required: true
     },
     complement: {
         type: String

@@ -51,7 +51,7 @@ exports.getAddressById = async (req, res) => {
 exports.updateAddress = async (req, res) => {
     try {
         const { id } = req.params;
-        const clientId = req.user.userId;
+        const clientId = req.userId;
 
         const updated = await Address.findOneAndUpdate(
             { _id: id, client: clientId },

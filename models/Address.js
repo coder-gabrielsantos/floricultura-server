@@ -24,10 +24,6 @@ const addressSchema = new mongoose.Schema({
     },
     complement: {
         type: String
-    },
-    receiver: {
-        type: String,
-        required: true
     }
 }, {
     timestamps: true

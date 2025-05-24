@@ -30,6 +30,24 @@ exports.getAddresses = async (req, res) => {
     }
 };
 
+exports.getAddressById = async (req, res) => {
+    try {
+        const address = await Address.findById(req.params.id);
+
+        if (!address) {
+            return res.status(404).json({ message: "Address not found" });
+        }
+
+        if (address.client.toString() !== req.userId) {
+            return res.status(403).json({ message: "Access denied" });
+        }
+
+        res.json(address);
+    } catch (err) {
+        res.status(500).json({ message: "Failed to retrieve address", error: err });
+    }
+};
+
 exports.updateAddress = async (req, res) => {
     try {
         const { id } = req.params;

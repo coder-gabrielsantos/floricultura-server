@@ -1,4 +1,5 @@
 const User = require("../models/User");
+const Address = require("../models/Address");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 
@@ -79,7 +80,17 @@ exports.getMe = async (req, res) => {
     try {
         const user = await User.findById(req.userId).select("-password");
         if (!user) return res.status(404).json({ message: "User not found" });
-        res.json(user);
+
+        const addresses = await Address.find({ client: req.userId });
+
+        res.json({
+            _id: user._id,
+            name: user.name,
+            email: user.email,
+            phone: user.phone,
+            role: user.role,
+            addresses
+        });
     } catch (err) {
         res.status(500).json({ message: "Failed to fetch user data", error: err });
     }

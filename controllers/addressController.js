@@ -2,13 +2,19 @@ const Address = require("../models/Address");
 
 exports.createAddress = async (req, res) => {
     try {
-        const clientId = req.user.userId;
-        const data = req.body;
+        const { street, number, neighborhood, reference, complement } = req.body;
 
-        const newAddress = new Address({ ...data, client: clientId });
+        const newAddress = new Address({
+            client: req.userId,
+            street,
+            number,
+            neighborhood,
+            reference,
+            complement
+        });
+
         await newAddress.save();
-
-        res.status(201).json({ message: "Address saved", address: newAddress });
+        res.status(201).json(newAddress);
     } catch (err) {
         res.status(500).json({ message: "Failed to save address", error: err });
     }

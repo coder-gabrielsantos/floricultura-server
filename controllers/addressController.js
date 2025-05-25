@@ -72,7 +72,7 @@ exports.updateAddress = async (req, res) => {
 exports.deleteAddress = async (req, res) => {
     try {
         const { id } = req.params;
-        const clientId = req.user.userId;
+        const clientId = req.userId;
 
         const deleted = await Address.findOneAndDelete({ _id: id, client: clientId });
 

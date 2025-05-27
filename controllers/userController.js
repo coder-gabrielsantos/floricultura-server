@@ -3,8 +3,8 @@ const Address = require("../models/Address");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 
-const generateToken = (userId) => {
-    return jwt.sign({ userId: userId }, process.env.JWT_SECRET, { expiresIn: "5d" });
+const generateToken = (userId, role) => {
+    return jwt.sign({ userId, role }, process.env.JWT_SECRET, { expiresIn: "5d" });
 };
 
 // REGISTER
@@ -26,7 +26,7 @@ exports.register = async (req, res) => {
 
         await user.save();
 
-        const token = generateToken(user._id);
+        const token = generateToken(user._id, user.role);
 
         res.status(201).json({
             _id: user._id,
@@ -60,7 +60,7 @@ exports.login = async (req, res) => {
             return res.status(401).json({ message: "Incorrect password" });
         }
 
-        const token = generateToken(user._id);
+        const token = generateToken(user._id, user.role);
 
         res.json({
             _id: user._id,

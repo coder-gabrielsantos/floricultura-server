@@ -1,4 +1,5 @@
 const Product = require("../models/Product");
+const Catalog = require("../models/Catalog");
 
 // Create new product (admin only)
 exports.createProduct = async (req, res) => {
@@ -7,9 +8,9 @@ exports.createProduct = async (req, res) => {
             name,
             price,
             stock,
-            category,
             description,
-            images // Expect array of { base64, contentType }
+            images, // Expect array of { base64, contentType }
+            catalogs // IDs dos catálogos selecionados
         } = req.body;
 
         const imageBuffers = (images || []).map(img => ({
@@ -21,12 +22,19 @@ exports.createProduct = async (req, res) => {
             name,
             price,
             stock,
-            category,
             description,
             images: imageBuffers
         });
 
         await product.save();
+
+        // Update catalogs
+        if (catalogs && catalogs.length > 0) {
+            await Catalog.updateMany(
+                { _id: { $in: catalogs } },
+                { $addToSet: { products: product._id } }
+            );
+        }
 
         res.status(201).json({ message: "Product created successfully", product });
     } catch (err) {

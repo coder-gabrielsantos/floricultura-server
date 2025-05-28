@@ -7,6 +7,6 @@ const { verifyToken, requireAdmin } = require("../middleware/authMiddleware");
 router.get("/", productController.getAllProducts);
 
 // Admin: create product
-router.post("/", verifyToken, requireAdmin, productController.createProduct);
+router.post("/new-product", verifyToken, requireAdmin, productController.createProduct);
 
 module.exports = router;

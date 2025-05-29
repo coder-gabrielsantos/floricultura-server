@@ -45,6 +45,17 @@ exports.createProduct = async (req, res) => {
 // Get all products
 exports.getAllProducts = async (req, res) => {
     try {
+        const catalogId = req.query.catalog;
+
+        if (catalogId) {
+            const catalog = await Catalog.findById(catalogId).populate("products");
+
+            if (!catalog) {
+                return res.status(404).json({ message: "Catalog not found" });
+            }
+            return res.json(catalog.products);
+        }
+
         const products = await Product.find().sort({ createdAt: -1 });
         res.json(products);
     } catch (err) {

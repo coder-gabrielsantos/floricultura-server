@@ -48,12 +48,13 @@ exports.getAllProducts = async (req, res) => {
         const catalogId = req.query.catalog;
 
         if (catalogId) {
-            const catalog = await Catalog.findById(catalogId).populate("products");
-
+            const catalog = await Catalog.findById(catalogId);
             if (!catalog) {
                 return res.status(404).json({ message: "Catalog not found" });
             }
-            return res.json(catalog.products);
+
+            const products = await Product.find({ _id: { $in: catalog.products } }).sort({ createdAt: -1 });
+            return res.json(products);
         }
 
         const products = await Product.find().sort({ createdAt: -1 });

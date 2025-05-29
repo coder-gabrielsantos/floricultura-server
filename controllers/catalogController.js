@@ -14,7 +14,13 @@ exports.createCatalog = async (req, res) => {
 // Get all catalogs
 exports.getCatalogs = async (req, res) => {
     try {
-        const catalogs = await Catalog.find().populate("products", "name price");
+        const catalogs = await Catalog.find()
+            .populate({
+                path: "products",
+                select: "name images contentType",
+                options: { sort: { createdAt: -1 } }
+            });
+
         res.json(catalogs);
     } catch (err) {
         res.status(500).json({ message: "Failed to fetch catalogs", error: err });

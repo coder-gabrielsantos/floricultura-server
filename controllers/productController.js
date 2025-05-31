@@ -1,5 +1,6 @@
 const Product = require("../models/Product");
 const Catalog = require("../models/Catalog");
+const mongoose = require("mongoose");
 
 // Create new product (admin only)
 exports.createProduct = async (req, res) => {
@@ -48,12 +49,19 @@ exports.getAllProducts = async (req, res) => {
         const catalogId = req.query.catalog;
 
         if (catalogId) {
+            if (!mongoose.Types.ObjectId.isValid(catalogId)) {
+                return res.status(400).json({ message: "Invalid catalog ID" });
+            }
+
             const catalog = await Catalog.findById(catalogId);
             if (!catalog) {
                 return res.status(404).json({ message: "Catalog not found" });
             }
 
-            const products = await Product.find({ _id: { $in: catalog.products } }).sort({ createdAt: -1 });
+            const products = await Product.find({
+                _id: { $in: catalog.products }
+            }).sort({ createdAt: -1 });
+
             return res.json(products);
         }
 

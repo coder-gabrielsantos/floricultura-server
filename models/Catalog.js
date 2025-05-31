@@ -5,6 +5,10 @@ const catalogSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    coverImage: {
+        data: Buffer,
+        contentType: String
+    },
     products: [
         {
             type: mongoose.Schema.Types.ObjectId,

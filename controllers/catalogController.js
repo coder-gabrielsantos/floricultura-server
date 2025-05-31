@@ -14,14 +14,25 @@ exports.createCatalog = async (req, res) => {
 // Get all catalogs
 exports.getCatalogs = async (req, res) => {
     try {
-        const catalogs = await Catalog.find()
-            .populate({
-                path: "products",
-                select: "name images contentType",
-                options: { sort: { createdAt: -1 } }
-            });
+        const catalogs = await Catalog.find().populate("products");
 
-        res.json(catalogs);
+        const response = catalogs.map((cat) => {
+            const coverImage = cat.coverImage?.data
+                ? {
+                    base64: cat.coverImage.data.toString("base64"),
+                    contentType: cat.coverImage.contentType,
+                }
+                : null;
+
+            return {
+                _id: cat._id,
+                name: cat.name,
+                products: cat.products,
+                coverImage,
+            };
+        });
+
+        res.json(response);
     } catch (err) {
         res.status(500).json({ message: "Failed to fetch catalogs", error: err });
     }
@@ -41,7 +52,18 @@ exports.getCatalogById = async (req, res) => {
 // Update catalog
 exports.updateCatalog = async (req, res) => {
     try {
-        const updated = await Catalog.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        const { name, coverImage } = req.body;
+
+        const updateData = { name };
+        if (coverImage?.base64 && coverImage?.contentType) {
+            updateData.coverImage = {
+                data: Buffer.from(coverImage.base64, "base64"),
+                contentType: coverImage.contentType,
+            };
+        }
+
+        const updated = await Catalog.findByIdAndUpdate(req.params.id, updateData, { new: true });
+
         res.json(updated);
     } catch (err) {
         res.status(500).json({ message: "Failed to update catalog", error: err });

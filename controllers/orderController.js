@@ -1,6 +1,7 @@
 const Order = require("../models/Order");
 const Product = require("../models/Product");
 const Address = require("../models/Address");
+const mongoose = require("mongoose");
 
 // Max orders per time block
 const MAX_ORDERS_PER_BLOCK = 3;
@@ -8,59 +9,57 @@ const MAX_ORDERS_PER_BLOCK = 3;
 exports.createOrder = async (req, res) => {
     try {
         const {
-            products,
+            receiverName,
+            cardMessage,
             date,
             timeBlock,
             deliveryType,
+            paymentMethod,
             address,
-            cardMessage,
-            paymentMethod
+            products
         } = req.body;
 
         const clientId = req.user.userId;
 
-        // Check time block limit
+        if (!Array.isArray(products) || products.length === 0) {
+            return res.status(400).json({ message: "Lista de produtos inválida ou vazia" });
+        }
+
         const existingOrders = await Order.countDocuments({ date, timeBlock });
         if (existingOrders >= MAX_ORDERS_PER_BLOCK) {
             return res.status(400).json({
-                message: "Time block is full. Please select another time."
+                message: "Bloco de horário cheio. Por favor, selecione outro horário."
             });
         }
 
-        // Validate deliveryType + address
         if (deliveryType === "entrega") {
             if (!address) {
-                return res.status(400).json({
-                    message: "Address is required for delivery orders"
-                });
+                return res.status(400).json({ message: "Endereço obrigatório para entrega" });
             }
 
             const savedAddress = await Address.findOne({ _id: address, client: clientId });
-
             if (!savedAddress) {
-                return res.status(404).json({ message: "Address not found or not authorized" });
+                return res.status(404).json({ message: "Endereço não encontrado ou não autorizado" });
             }
         }
 
-        // Validate product quantities
         for (const item of products) {
-            const product = await Product.findById(item.product);
+            const productId = new mongoose.Types.ObjectId(item.product);
+            const product = await Product.findById(productId);
             if (!product) {
-                return res.status(404).json({ message: "Product not found" });
+                return res.status(404).json({ message: "Produto não encontrado" });
             }
             if (product.stock < item.quantity) {
                 return res.status(400).json({
-                    message: `Insufficient stock for product: ${product.name}`
+                    message: `Estoque insuficiente para o produto: ${product.name}`
                 });
             }
         }
 
-        // All validations passed, reduce stock
         for (const item of products) {
-            await Product.findByIdAndUpdate(
-                item.product,
-                { $inc: { stock: -item.quantity } }
-            );
+            await Product.findByIdAndUpdate(item.product, {
+                $inc: { stock: -item.quantity }
+            });
         }
 
         const order = new Order({
@@ -70,14 +69,17 @@ exports.createOrder = async (req, res) => {
             timeBlock,
             deliveryType,
             address: deliveryType === "entrega" ? address : null,
+            receiverName,
             cardMessage,
-            paymentMethod
+            paymentMethod,
+            status: "pendente"
         });
 
         await order.save();
-        res.status(201).json({ message: "Order created successfully", order });
+
+        return res.status(201).json({ message: "Pedido criado com sucesso", order });
     } catch (err) {
-        res.status(500).json({ message: "Failed to create order", error: err });
+        return res.status(500).json({ message: "Erro ao criar pedido", error: err.message });
     }
 };
 

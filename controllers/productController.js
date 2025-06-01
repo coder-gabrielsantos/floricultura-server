@@ -1,5 +1,6 @@
 const Product = require("../models/Product");
 const Catalog = require("../models/Catalog");
+const Cart = require("../models/Cart");
 const mongoose = require("mongoose");
 
 // Create new product (admin only)

@@ -15,4 +15,6 @@ router.get("/available-blocks", orderController.getAvailableBlocks);
 // Admin: update order status
 router.put("/:id/status", verifyToken, requireAdmin, orderController.updateOrderStatus);
 
+router.get("/cleanup-pending", orderController.cleanupPendingOrders);
+
 module.exports = router;

@@ -1,11 +1,9 @@
 const Order = require("../models/Order");
+const Product = require("../models/Product");
+const Address = require("../models/Address");
 
 // Max orders per time block
 const MAX_ORDERS_PER_BLOCK = 3;
-
-// Create a new order
-const Product = require("../models/Product");
-const Address = require("../models/Address");
 
 exports.createOrder = async (req, res) => {
     try {
@@ -170,5 +168,39 @@ exports.updateOrderStatus = async (req, res) => {
         res.json({ message: "Order status updated", order });
     } catch (err) {
         res.status(500).json({ message: "Failed to update order status", error: err });
+    }
+};
+
+// Automatically cancel pending orders older than 30 minutes and restore stock
+exports.cleanupPendingOrders = async (req, res) => {
+    try {
+        // Define cutoff time: now - 10 minutes
+        const cutoff = new Date(Date.now() - 10 * 60 * 1000);
+
+        // Find pending orders older than 30 minutes
+        const expiredOrders = await Order.find({
+            status: "pending",
+            createdAt: { $lt: cutoff }
+        });
+
+        for (const order of expiredOrders) {
+            // Restore product stock for each item
+            for (const item of order.items) {
+                await Product.findByIdAndUpdate(item.product, {
+                    $inc: { stock: item.quantity }
+                });
+            }
+
+            // Mark order as canceled
+            order.status = "canceled";
+            await order.save();
+        }
+
+        res.json({
+            message: `Cleanup completed: ${expiredOrders.length} order(s) canceled.`
+        });
+    } catch (err) {
+        console.error("Error during pending order cleanup:", err);
+        res.status(500).json({ error: "Internal error during cleanup process." });
     }
 };

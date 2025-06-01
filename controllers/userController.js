@@ -78,8 +78,18 @@ exports.login = async (req, res) => {
 // GET /me
 exports.getMe = async (req, res) => {
     try {
-        const user = await User.findById(req.userId).select("-password");
-        if (!user) return res.status(404).json({ message: "User not found" });
+        const user = await User.findById(req.userId)
+            .select("-password")
+            .populate({
+                path: "orders",
+                populate: {
+                    path: "products.product"
+                }
+            });
+
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
 
         const addresses = await Address.find({ client: req.userId });
 
@@ -89,7 +99,8 @@ exports.getMe = async (req, res) => {
             email: user.email,
             phone: user.phone,
             role: user.role,
-            addresses
+            addresses,
+            orders: user.orders
         });
     } catch (err) {
         res.status(500).json({ message: "Failed to fetch user data", error: err });

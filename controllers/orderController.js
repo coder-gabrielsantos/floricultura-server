@@ -1,5 +1,6 @@
 const Order = require("../models/Order");
 const Product = require("../models/Product");
+const User = require("../models/User");
 const Address = require("../models/Address");
 const mongoose = require("mongoose");
 
@@ -77,6 +78,10 @@ exports.createOrder = async (req, res) => {
 
         await order.save();
 
+        await User.findByIdAndUpdate(clientId, {
+            $push: { orders: order._id }
+        });
+
         return res.status(201).json({ message: "Pedido criado com sucesso", order });
     } catch (err) {
         return res.status(500).json({ message: "Erro ao criar pedido", error: err.message });
@@ -95,6 +100,7 @@ exports.getOrders = async (req, res) => {
         const orders = await Order.find(query)
             .populate("client", "name email phone")
             .populate("products.product", "name price")
+            .populate("address")
             .sort({ createdAt: -1 });
 
         res.json(orders);
@@ -102,6 +108,19 @@ exports.getOrders = async (req, res) => {
         res.status(500).json({ message: "Failed to fetch orders", error: err });
     }
 };
+
+exports.getMyOrders = async (req, res) => {
+    try {
+        const orders = await Order.find({ client: req.user.userId })
+            .populate("products.product")
+            .sort({ createdAt: -1 });
+
+        res.json(orders);
+    } catch (err) {
+        res.status(500).json({ message: "Erro ao buscar pedidos do cliente", error: err.message });
+    }
+};
+
 
 // Get available time blocks for a specific date
 exports.getAvailableBlocks = async (req, res) => {

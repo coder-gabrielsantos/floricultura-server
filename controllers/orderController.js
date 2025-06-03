@@ -1,4 +1,5 @@
 const Order = require("../models/Order");
+const Cart = require("../models/Cart");
 const Product = require("../models/Product");
 const User = require("../models/User");
 const Address = require("../models/Address");
@@ -81,6 +82,8 @@ exports.createOrder = async (req, res) => {
         await User.findByIdAndUpdate(clientId, {
             $push: { orders: order._id }
         });
+
+        await Cart.findOneAndDelete({ client: clientId });
 
         return res.status(201).json({ message: "Pedido criado com sucesso", order });
     } catch (err) {

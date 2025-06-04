@@ -11,6 +11,7 @@ const orderRoutes = require("./routes/orderRoutes");
 const addressRoutes = require("./routes/addressRoutes");
 const catalogRoutes = require("./routes/catalogRoutes");
 const cartRoutes = require("./routes/cartRoutes");
+const pagbankRoutes = require("./routes/pagbankRoutes");
 
 const app = express();
 
@@ -32,6 +33,7 @@ app.use("/api/orders", orderRoutes);
 app.use("/api/addresses", addressRoutes);
 app.use("/api/catalogs", catalogRoutes);
 app.use("/api/cart", cartRoutes);
+app.use("/api/pagbank", pagbankRoutes);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, '0.0.0.0', () => {

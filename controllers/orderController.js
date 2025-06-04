@@ -5,6 +5,8 @@ const User = require("../models/User");
 const Address = require("../models/Address");
 const mongoose = require("mongoose");
 
+const { sendOrderNotification } = require("../services/whatsappService");
+
 // Max orders per time block
 const MAX_ORDERS_PER_BLOCK = 3;
 
@@ -30,7 +32,7 @@ exports.createOrder = async (req, res) => {
         const existingOrders = await Order.countDocuments({ date, timeBlock });
         if (existingOrders >= MAX_ORDERS_PER_BLOCK) {
             return res.status(400).json({
-                message: "Bloco de horário cheio. Por favor, selecione outro horário."
+                message: "Bloco de horário cheio. Por favor, selecione outro horário"
             });
         }
 
@@ -85,11 +87,43 @@ exports.createOrder = async (req, res) => {
 
         await Cart.findOneAndDelete({ client: clientId });
 
+        const user = await User.findById(clientId);
+        const summary = await buildOrderMessage(order, user);
+        await sendOrderNotification(summary);
+
         return res.status(201).json({ message: "Pedido criado com sucesso", order });
     } catch (err) {
         return res.status(500).json({ message: "Erro ao criar pedido", error: err.message });
     }
 };
+
+async function buildOrderMessage(order, user) {
+    let itemsText = "";
+    let total = 0;
+
+    for (const item of order.products) {
+        const product = await Product.findById(item.product);
+        if (product) {
+            const subtotal = product.price * item.quantity;
+            total += subtotal;
+            itemsText += `\n- ${product.name} x${item.quantity} = R$ ${subtotal.toFixed(2)}`;
+        }
+    }
+
+    return (
+        `🛍️ *Nova compra realizada!*
+
+            Cliente: ${user.name}
+            Telefone: ${user.phone}
+            Data: ${order.date}
+            Horário: ${order.timeBlock}
+            Pagamento: ${order.paymentMethod}
+            
+            *Itens comprados:*${itemsText}
+            
+            *Total:* R$ ${total.toFixed(2)}`
+    );
+}
 
 // Get all orders (admin) or user-specific
 exports.getOrders = async (req, res) => {

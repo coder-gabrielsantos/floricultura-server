@@ -12,7 +12,8 @@ exports.createProduct = async (req, res) => {
             stock,
             description,
             images, // Expect array of { base64, contentType }
-            catalogs // IDs dos catálogos selecionados
+            catalogs, // IDs dos catálogos selecionados
+            category
         } = req.body;
 
         const imageBuffers = (images || []).map(img => ({
@@ -25,7 +26,8 @@ exports.createProduct = async (req, res) => {
             price,
             stock,
             description,
-            images: imageBuffers
+            category,
+            images: imageBuffers,
         });
 
         await product.save();
@@ -95,7 +97,8 @@ exports.updateProduct = async (req, res) => {
             stock,
             description,
             images,
-            catalogs
+            catalogs,
+            category
         } = req.body;
 
         const imageBuffers = (images || []).map(img => ({
@@ -110,6 +113,7 @@ exports.updateProduct = async (req, res) => {
                 price,
                 stock,
                 description,
+                category,
                 images: imageBuffers
             },
             { new: true }

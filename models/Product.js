@@ -1,5 +1,14 @@
 const mongoose = require("mongoose");
 
+const CATEGORIES = [
+    "Arranjo Floral",
+    "Buquê",
+    "Casamento",
+    "Coroa e Arranjo Fúnebre",
+    "Flor Individual",
+    "Ramalhete"
+];
+
 const productSchema = new mongoose.Schema({
     name: {
         type: String,
@@ -15,6 +24,11 @@ const productSchema = new mongoose.Schema({
     },
     description: {
         type: String
+    },
+    category: {
+        type: String,
+        enum: CATEGORIES,
+        required: true
     },
     images: [
         {

@@ -16,7 +16,7 @@ const app = express();
 
 // Libera CORS para qualquer origem
 app.use(cors({
-    origin: "https://floricultura-client.vercel.app",
+    origin: "https://santateresinha.vercel.app/",
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"]
 }));

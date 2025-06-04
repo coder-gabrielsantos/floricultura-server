@@ -16,7 +16,9 @@ const app = express();
 
 // Libera CORS para qualquer origem
 app.use(cors({
-    origin: "*"
+    origin: "*",
+    methods: ["GET", "POST"],
+    allowedHeaders: ["Content-Type"]
 }));
 
 app.use(express.json({ limit: "5mb" }));
@@ -33,7 +35,12 @@ app.use("/api/addresses", addressRoutes);
 app.use("/api/catalogs", catalogRoutes);
 app.use("/api/cart", cartRoutes);
 
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 Server running on port ${PORT}`);
-});
+// Export for Vercel serverless
+module.exports = app;
+
+/*
+    const PORT = process.env.PORT || 5000;
+    app.listen(PORT, '0.0.0.0', () => {
+        console.log(`🚀 Server running on port ${PORT}`);
+    });
+ */

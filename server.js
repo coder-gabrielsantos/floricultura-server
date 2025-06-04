@@ -15,8 +15,19 @@ const cartRoutes = require("./routes/cartRoutes");
 const app = express();
 
 // Libera CORS para qualquer origem
+const allowedOrigins = [
+    "https://santateresinha.vercel.app",
+    "https://floricultura-client.vercel.app"
+];
+
 app.use(cors({
-    origin: "https://santateresinha.vercel.app/",
+    origin: function (origin, callback) {
+        if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(new Error("Not allowed by CORS"));
+        }
+    },
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"]
 }));

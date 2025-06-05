@@ -83,6 +83,11 @@ exports.createOrder = async (req, res) => {
             $push: { orders: order._id }
         });
 
+        if (paymentMethod === "especie") {
+            const { confirmOrder } = require("../services/orderService");
+            await confirmOrder(order._id);
+        }
+
         return res.status(201).json({ message: "Pedido criado com sucesso", order });
     } catch (err) {
         return res.status(500).json({ message: "Erro ao criar pedido", error: err.message });

@@ -4,7 +4,10 @@ exports.createPreference = async (req, res) => {
     try {
         const { description, price, quantity, orderId } = req.body;
 
+        console.log("✅ Requisição recebida:", req.body);
+
         if (!orderId) {
+            console.error("❌ orderId ausente.");
             return res.status(400).json({ message: "orderId é obrigatório para o pagamento" });
         }
 
@@ -27,10 +30,24 @@ exports.createPreference = async (req, res) => {
             }
         };
 
+        console.log("📦 Criando preferência com dados:", preferenceData);
+
         const response = await preference.create({ body: preferenceData });
+
+        console.log("✅ Preferência criada com sucesso:", response.init_point);
+
         res.status(200).json({ init_point: response.init_point });
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: "Erro ao criar preferência", error: error.message });
+        console.error("❌ Erro ao criar preferência:", {
+            message: error.message,
+            response: error.response?.data,
+            bodyRecebido: req.body
+        });
+
+        res.status(500).json({
+            message: "Erro ao criar preferência",
+            error: error.message,
+            details: error.response?.data || null
+        });
     }
 };

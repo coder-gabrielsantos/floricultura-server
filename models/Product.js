@@ -23,11 +23,13 @@ const productSchema = new mongoose.Schema({
         required: true
     },
     description: {
-        type: String
+        type: String,
+        required: false
     },
     category: {
         type: String,
-        enum: CATEGORIES
+        enum: CATEGORIES,
+        required: false
     },
     images: [
         {

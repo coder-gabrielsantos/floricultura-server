@@ -1,13 +1,11 @@
 const { preference } = require("../config/mercadoPago");
+const Order = require("../models/Order");
 
 exports.createPreference = async (req, res) => {
     try {
         const { description, price, quantity, orderId } = req.body;
 
-        console.log("✅ Requisição recebida:", req.body);
-
         if (!orderId) {
-            console.error("❌ orderId ausente.");
             return res.status(400).json({ message: "orderId é obrigatório para o pagamento" });
         }
 
@@ -30,20 +28,22 @@ exports.createPreference = async (req, res) => {
             }
         };
 
-        console.log("📦 Criando preferência com dados:", preferenceData);
-
         const response = await preference.create({ body: preferenceData });
 
-        console.log("✅ Preferência criada com sucesso:", response.init_point);
+        // ⏳ Agendar remoção automática do pedido após 10 minutos, se ainda estiver pendente
+        setTimeout(async () => {
+            try {
+                const order = await Order.findById(orderId);
+                if (order && order.status === "pendente") {
+                    await Order.findByIdAndDelete(orderId);
+                }
+            } catch (err) {
+                console.error("Erro ao tentar apagar pedido pendente:", err.message);
+            }
+        }, 10 * 60 * 1000); // 10 minutos
 
         res.status(200).json({ init_point: response.init_point });
     } catch (error) {
-        console.error("❌ Erro ao criar preferência:", {
-            message: error.message,
-            response: error.response?.data,
-            bodyRecebido: req.body
-        });
-
         res.status(500).json({
             message: "Erro ao criar preferência",
             error: error.message,

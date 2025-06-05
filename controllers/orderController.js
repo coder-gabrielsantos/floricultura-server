@@ -1,13 +1,11 @@
 const Order = require("../models/Order");
-const Cart = require("../models/Cart");
 const Product = require("../models/Product");
 const User = require("../models/User");
 const Address = require("../models/Address");
 const mongoose = require("mongoose");
 
-const { sendOrderNotification } = require("../services/whatsappService");
+const { confirmOrder } = require("../services/orderService");
 
-// Max orders per time block
 const MAX_ORDERS_PER_BLOCK = 3;
 
 exports.createOrder = async (req, res) => {
@@ -29,7 +27,13 @@ exports.createOrder = async (req, res) => {
             return res.status(400).json({ message: "Lista de produtos inválida ou vazia" });
         }
 
-        const existingOrders = await Order.countDocuments({ date, timeBlock });
+        // ✅ Verificar apenas pedidos confirmados
+        const existingOrders = await Order.countDocuments({
+            date,
+            timeBlock,
+            status: "confirmado"
+        });
+
         if (existingOrders >= MAX_ORDERS_PER_BLOCK) {
             return res.status(400).json({
                 message: "Bloco de horário cheio. Por favor, selecione outro horário"
@@ -60,12 +64,6 @@ exports.createOrder = async (req, res) => {
             }
         }
 
-        for (const item of products) {
-            await Product.findByIdAndUpdate(item.product, {
-                $inc: { stock: -item.quantity }
-            });
-        }
-
         const order = new Order({
             client: clientId,
             products,
@@ -85,61 +83,18 @@ exports.createOrder = async (req, res) => {
             $push: { orders: order._id }
         });
 
-        await Cart.findOneAndDelete({ client: clientId });
-
-        const user = await User.findById(clientId);
-        const summary = await buildOrderMessage(order, user);
-        await sendOrderNotification(summary);
-
         return res.status(201).json({ message: "Pedido criado com sucesso", order });
     } catch (err) {
         return res.status(500).json({ message: "Erro ao criar pedido", error: err.message });
     }
 };
 
-async function buildOrderMessage(order, user) {
-    let itemsText = "";
-    let total = 0;
-
-    for (const item of order.products) {
-        const product = await Product.findById(item.product);
-        if (product) {
-            const subtotal = product.price * item.quantity;
-            total += subtotal;
-            itemsText += `\n- ${product.name} x${item.quantity} = R$ ${subtotal.toFixed(2)}`;
-        }
-    }
-
-    return (
-
-        `🛍️ *Nova compra realizada!*
-
-Cliente: ${user.name}
-Telefone: ${user.phone}
-Data: ${order.date}
-Horário: ${order.timeBlock}
-Pagamento: ${order.paymentMethod}
-
-*Itens comprados:*
-${itemsText
-            .split('\n')
-            .filter(item => item.trim())
-            .map(item => `  - ${item.trim()}`)
-            .join('\n')}
-
-*Total:* R$ ${total.toFixed(2)}`
-
-    );
-}
-
-// Get all orders (admin) or user-specific
 exports.getOrders = async (req, res) => {
     try {
         const isAdmin = req.user.role === "admin";
-
         const query = isAdmin
-            ? {}
-            : { client: req.user.userId };
+            ? { status: { $ne: "pendente" } }
+            : { client: req.user.userId, status: { $ne: "pendente" } };
 
         const orders = await Order.find(query)
             .populate("client", "name email phone")
@@ -165,12 +120,9 @@ exports.getMyOrders = async (req, res) => {
     }
 };
 
-
-// Get available time blocks for a specific date
 exports.getAvailableBlocks = async (req, res) => {
     try {
         const { date } = req.query;
-
         if (!date) {
             return res.status(400).json({ message: "Date is required" });
         }
@@ -184,14 +136,10 @@ exports.getAvailableBlocks = async (req, res) => {
             "16:00–18:00"
         ];
 
+        // ✅ Considerar apenas pedidos confirmados
         const blockCounts = await Order.aggregate([
-            { $match: { date } },
-            {
-                $group: {
-                    _id: "$timeBlock",
-                    count: { $sum: 1 }
-                }
-            }
+            { $match: { date, status: "confirmado" } },
+            { $group: { _id: "$timeBlock", count: { $sum: 1 } } }
         ]);
 
         const countMap = {};
@@ -199,9 +147,7 @@ exports.getAvailableBlocks = async (req, res) => {
             countMap[block._id] = block.count;
         });
 
-        const availableBlocks = allBlocks.filter(block => {
-            return (countMap[block] || 0) < 3;
-        });
+        const availableBlocks = allBlocks.filter(block => (countMap[block] || 0) < 3);
 
         res.json({ date, availableBlocks });
     } catch (err) {
@@ -209,7 +155,6 @@ exports.getAvailableBlocks = async (req, res) => {
     }
 };
 
-// Update order status (admin only)
 exports.updateOrderStatus = async (req, res) => {
     try {
         const { id } = req.params;
@@ -220,14 +165,17 @@ exports.updateOrderStatus = async (req, res) => {
             return res.status(400).json({ message: "Invalid status value" });
         }
 
-        const order = await Order.findByIdAndUpdate(
-            id,
-            { status },
-            { new: true }
-        ).populate("client", "name");
-
+        const order = await Order.findById(id);
         if (!order) {
             return res.status(404).json({ message: "Order not found" });
+        }
+
+        // Se for confirmado, usa a lógica completa do serviço
+        if (status === "confirmado") {
+            await confirmOrder(id);
+        } else {
+            order.status = status;
+            await order.save();
         }
 
         res.json({ message: "Order status updated", order });
@@ -239,33 +187,21 @@ exports.updateOrderStatus = async (req, res) => {
 // Automatically cancel pending orders older than 30 minutes and restore stock
 exports.cleanupPendingOrders = async (req, res) => {
     try {
-        // Define cutoff time: now - 10 minutes
-        const cutoff = new Date(Date.now() - 10 * 60 * 1000);
+        const cutoff = new Date(Date.now() - 10 * 60 * 1000); // 10 minutos atrás
 
-        // Find pending orders older than 30 minutes
         const expiredOrders = await Order.find({
-            status: "pending",
+            status: "pendente",
             createdAt: { $lt: cutoff }
         });
 
         for (const order of expiredOrders) {
-            // Restore product stock for each item
-            for (const item of order.items) {
-                await Product.findByIdAndUpdate(item.product, {
-                    $inc: { stock: item.quantity }
-                });
-            }
-
-            // Mark order as canceled
-            order.status = "canceled";
-            await order.save();
+            await Order.findByIdAndDelete(order._id);
+            console.log(`🗑️ Pedido ${order._id} removido por inatividade.`);
         }
 
-        res.json({
-            message: `Cleanup completed: ${expiredOrders.length} order(s) canceled.`
-        });
+        res.json({ message: `Limpeza concluída: ${expiredOrders.length} pedidos removidos.` });
     } catch (err) {
-        console.error("Error during pending order cleanup:", err);
-        res.status(500).json({ error: "Internal error during cleanup process." });
+        console.error("Erro na limpeza de pedidos:", err);
+        res.status(500).json({ error: "Erro interno na limpeza de pedidos" });
     }
 };

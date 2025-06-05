@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const { MercadoPagoConfig, Payment } = require("mercadopago");
-const Order = require("../models/Order");
+const { confirmOrder } = require("../services/orderService");
 
 const mp = new MercadoPagoConfig({
     accessToken: process.env.MERCADO_PAGO_ACCESS_TOKEN
@@ -19,13 +19,11 @@ router.post("/", async (req, res) => {
         }
 
         const result = await payment.get({ id: paymentId });
-
         const status = result.status;
         const orderId = result.metadata?.order_id;
 
         if (status === "approved" && orderId) {
-            await Order.findByIdAndUpdate(orderId, { status: "confirmado" });
-            console.log(`✅ Pedido ${orderId} confirmado via webhook`);
+            await confirmOrder(orderId);
         }
 
         res.sendStatus(200);

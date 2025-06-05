@@ -53,7 +53,7 @@ const orderSchema = new mongoose.Schema({
     },
     paymentMethod: {
         type: String,
-        enum: ["pix", "cartao", "especie"],
+        enum: ["online", "especie"],
         required: true
     },
     status: {

@@ -11,6 +11,8 @@ const orderRoutes = require("./routes/orderRoutes");
 const addressRoutes = require("./routes/addressRoutes");
 const catalogRoutes = require("./routes/catalogRoutes");
 const cartRoutes = require("./routes/cartRoutes");
+const paymentRoutes = require("./routes/paymentRoutes");
+const paymentWebhook = require("./routes/_paymentWebhook");
 
 const app = express();
 
@@ -45,6 +47,8 @@ app.use("/api/orders", orderRoutes);
 app.use("/api/addresses", addressRoutes);
 app.use("/api/catalogs", catalogRoutes);
 app.use("/api/cart", cartRoutes);
+app.use("/api/payments", paymentRoutes);
+app.use("/api/pagamentos/webhook", paymentWebhook);
 
 // Export for Vercel serverless
 module.exports = app;

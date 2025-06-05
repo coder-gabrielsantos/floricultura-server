@@ -111,17 +111,24 @@ async function buildOrderMessage(order, user) {
     }
 
     return (
+
         `🛍️ *Nova compra realizada!*
 
-            Cliente: ${user.name}
-            Telefone: ${user.phone}
-            Data: ${order.date}
-            Horário: ${order.timeBlock}
-            Pagamento: ${order.paymentMethod}
-            
-            *Itens comprados:*${itemsText}
-            
-            *Total:* R$ ${total.toFixed(2)}`
+Cliente: ${user.name}
+Telefone: ${user.phone}
+Data: ${order.date}
+Horário: ${order.timeBlock}
+Pagamento: ${order.paymentMethod}
+
+*Itens comprados:*
+${itemsText
+            .split('\n')
+            .filter(item => item.trim())
+            .map(item => `  - ${item.trim()}`)
+            .join('\n')}
+
+*Total:* R$ ${total.toFixed(2)}`
+
     );
 }
 

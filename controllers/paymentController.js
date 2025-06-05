@@ -4,6 +4,10 @@ exports.createPreference = async (req, res) => {
     try {
         const { description, price, quantity, orderId } = req.body;
 
+        if (!orderId) {
+            return res.status(400).json({ message: "orderId é obrigatório para o pagamento" });
+        }
+
         const preferenceData = {
             items: [
                 {

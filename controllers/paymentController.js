@@ -9,11 +9,20 @@ exports.createPreference = async (req, res) => {
             return res.status(400).json({ message: "orderId é obrigatório para o pagamento" });
         }
 
+        const order = await Order.findById(orderId);
+        if (!order) {
+            return res.status(404).json({ message: "Pedido não encontrado" });
+        }
+
+        const totalPrice = order.deliveryType === "entrega"
+            ? Number(price) + 10
+            : Number(price);
+
         const preferenceData = {
             items: [
                 {
                     title: description,
-                    unit_price: Number(price),
+                    unit_price: totalPrice,
                     quantity: Number(quantity),
                 },
             ],

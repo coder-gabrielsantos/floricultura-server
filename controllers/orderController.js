@@ -1,4 +1,5 @@
 const Order = require("../models/Order");
+const Product = require("../models/Product");
 const Address = require("../models/Address");
 
 const { confirmOrder } = require("../services/orderService");

@@ -141,7 +141,7 @@ exports.getAvailableBlocks = async (req, res) => {
             return count < MAX_ORDERS_PER_BLOCK;
         });
 
-        res.json(availableBlocks);
+        res.json({ availableBlocks });
     } catch (err) {
         console.error("Erro ao obter blocos disponíveis:", err);
         res.status(500).json({ message: "Erro interno ao buscar blocos" });

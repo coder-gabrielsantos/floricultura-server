@@ -1,12 +1,7 @@
 const Order = require("../models/Order");
-const Product = require("../models/Product");
-const User = require("../models/User");
 const Address = require("../models/Address");
-const mongoose = require("mongoose");
 
 const { confirmOrder } = require("../services/orderService");
-
-const MAX_ORDERS_PER_BLOCK = 3;
 
 exports.createOrder = async (req, res) => {
     try {
@@ -22,7 +17,7 @@ exports.createOrder = async (req, res) => {
             paymentMethod
         } = req.body;
 
-        const MAX_ORDERS_PER_BLOCK = 5;
+        const MAX_ORDERS_PER_BLOCK = 3;
 
         let existingOrders = 0;
 

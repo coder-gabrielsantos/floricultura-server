@@ -90,8 +90,8 @@ exports.getOrders = async (req, res) => {
     try {
         const isAdmin = req.user.role === "admin";
         const query = isAdmin
-            ? { status: { $ne: "pendente" } }
-            : { client: req.user.userId, status: { $ne: "pendente" } };
+            ? {}
+            : { client: req.user.userId };
 
         const orders = await Order.find(query)
             .populate("client", "name email phone")

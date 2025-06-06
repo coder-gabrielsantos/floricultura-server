@@ -21,8 +21,8 @@ async function buildOrderMessage(order, user) {
 
 Cliente: ${user.name}
 Telefone: ${user.phone}
-Data: ${order.date}
-Horário: ${order.timeBlock}
+Data: ${order.date || "-"}
+Horário: ${order.timeBlock || "-"}
 Pagamento: ${order.paymentMethod}
 
 *Itens comprados:*
@@ -36,22 +36,22 @@ ${itemsText
 }
 
 exports.confirmOrder = async (orderId) => {
-    const order = await Order.findById(orderId).populate("client", "name phone");
+    try {
+        const order = await Order.findById(orderId).populate("client", "name phone");
 
-    if (!order || order.status === "confirmado") return;
+        if (!order || order.status === "confirmado") return;
 
-    order.status = "confirmado";
-    await order.save();
+        order.status = "confirmado";
+        await order.save();
 
-    for (const item of order.products) {
-        await Product.findByIdAndUpdate(item.product, {
-            $inc: { stock: -item.quantity }
-        });
+        await Cart.findOneAndDelete({ client: order.client._id });
+
+        const user = await User.findById(order.client._id);
+        const summary = await buildOrderMessage(order, user);
+        await sendOrderNotification(summary);
+
+        console.log(`✅ Pedido ${orderId} confirmado e notificado com sucesso.`);
+    } catch (error) {
+        console.error("❌ Erro ao confirmar pedido:", error.message);
     }
-
-    await Cart.findOneAndDelete({ client: order.client._id });
-
-    const user = await User.findById(order.client._id);
-    const summary = await buildOrderMessage(order, user);
-    await sendOrderNotification(summary);
 };

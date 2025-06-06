@@ -19,8 +19,6 @@ exports.createOrder = async (req, res) => {
 
         const MAX_ORDERS_PER_BLOCK = 3;
 
-        let existingOrders = 0;
-
         if (deliveryType === "entrega") {
             if (!date || !timeBlock) {
                 return res.status(400).json({
@@ -28,10 +26,10 @@ exports.createOrder = async (req, res) => {
                 });
             }
 
-            existingOrders = await Order.countDocuments({
+            const existingOrders = await Order.countDocuments({
                 date,
                 timeBlock,
-                status: "confirmado"
+                status: { $in: ["pendente", "confirmado"] }
             });
 
             if (existingOrders >= MAX_ORDERS_PER_BLOCK) {
@@ -53,6 +51,16 @@ exports.createOrder = async (req, res) => {
                     message: "Endereço não encontrado ou não autorizado"
                 });
             }
+        }
+
+        // Valida e reduz o estoque
+        for (const item of products) {
+            const product = await Product.findById(item.product);
+            if (!product || product.stock < item.quantity) {
+                return res.status(400).json({ message: `Estoque insuficiente para o produto ${item.product}` });
+            }
+            product.stock -= item.quantity;
+            await product.save();
         }
 
         const order = new Order({
@@ -111,9 +119,7 @@ exports.getMyOrders = async (req, res) => {
 exports.getAvailableBlocks = async (req, res) => {
     try {
         const { date } = req.query;
-        if (!date) {
-            return res.status(400).json({ message: "Date is required" });
-        }
+        const MAX_ORDERS_PER_BLOCK = 3;
 
         const allBlocks = [
             "06:00–08:00",
@@ -124,22 +130,20 @@ exports.getAvailableBlocks = async (req, res) => {
             "16:00–18:00"
         ];
 
-        // ✅ Considerar apenas pedidos confirmados
-        const blockCounts = await Order.aggregate([
-            { $match: { date, status: "confirmado" } },
-            { $group: { _id: "$timeBlock", count: { $sum: 1 } } }
-        ]);
-
-        const countMap = {};
-        blockCounts.forEach(block => {
-            countMap[block._id] = block.count;
+        const orders = await Order.find({
+            date,
+            status: { $in: ["pendente", "confirmado"] }
         });
 
-        const availableBlocks = allBlocks.filter(block => (countMap[block] || 0) < 3);
+        const availableBlocks = allBlocks.filter((block) => {
+            const count = orders.filter((o) => o.timeBlock === block).length;
+            return count < MAX_ORDERS_PER_BLOCK;
+        });
 
-        res.json({ date, availableBlocks });
+        res.json(availableBlocks);
     } catch (err) {
-        res.status(500).json({ message: "Failed to get available blocks", error: err });
+        console.error("Erro ao obter blocos disponíveis:", err);
+        res.status(500).json({ message: "Erro interno ao buscar blocos" });
     }
 };
 
@@ -172,10 +176,10 @@ exports.updateOrderStatus = async (req, res) => {
     }
 };
 
-// Automatically cancel pending orders older than 30 minutes and restore stock
+// Automatically cancel pending orders older than 15 minutes and restore stock
 exports.cleanupPendingOrders = async (req, res) => {
     try {
-        const cutoff = new Date(Date.now() - 10 * 60 * 1000); // 10 minutos atrás
+        const cutoff = new Date(Date.now() - 15 * 60 * 1000); // 15 minutos atrás
 
         const expiredOrders = await Order.find({
             status: "pendente",
@@ -183,6 +187,15 @@ exports.cleanupPendingOrders = async (req, res) => {
         });
 
         for (const order of expiredOrders) {
+            // Restaura o estoque
+            for (const item of order.products) {
+                const product = await Product.findById(item.product);
+                if (product) {
+                    product.stock += item.quantity;
+                    await product.save();
+                }
+            }
+
             await Order.findByIdAndDelete(order._id);
             console.log(`🗑️ Pedido ${order._id} removido por inatividade.`);
         }

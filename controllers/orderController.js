@@ -179,11 +179,6 @@ exports.updateOrderStatus = async (req, res) => {
 
 // Automatically cancel pending orders older than 15 minutes and restore stock
 exports.cleanupPendingOrders = async (req, res) => {
-
-    const cutoff = new Date(Date.now() - 15 * 60 * 1000);
-
-    res.json({ message: cutoff });
-
     try {
         const cutoff = new Date(Date.now() - 15 * 60 * 1000); // 15 minutos atrás
 

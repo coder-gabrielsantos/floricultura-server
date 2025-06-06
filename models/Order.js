@@ -23,8 +23,7 @@ const orderSchema = new mongoose.Schema({
         }
     ],
     date: {
-        type: String,
-        required: true
+        type: String
     },
     timeBlock: {
         type: String,
@@ -35,8 +34,7 @@ const orderSchema = new mongoose.Schema({
             "12:00–14:00",
             "14:00–16:00",
             "16:00–18:00"
-        ],
-        required: true
+        ]
     },
     deliveryType: {
         type: String,

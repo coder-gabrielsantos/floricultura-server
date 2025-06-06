@@ -10,56 +10,51 @@ const MAX_ORDERS_PER_BLOCK = 3;
 
 exports.createOrder = async (req, res) => {
     try {
+        const clientId = req.user.userId;
         const {
-            receiverName,
-            cardMessage,
+            products,
             date,
             timeBlock,
             deliveryType,
-            paymentMethod,
             address,
-            products
+            receiverName,
+            cardMessage,
+            paymentMethod
         } = req.body;
 
-        const clientId = req.user.userId;
+        const MAX_ORDERS_PER_BLOCK = 5;
 
-        if (!Array.isArray(products) || products.length === 0) {
-            return res.status(400).json({ message: "Lista de produtos inválida ou vazia" });
-        }
-
-        // ✅ Verificar apenas pedidos confirmados
-        const existingOrders = await Order.countDocuments({
-            date,
-            timeBlock,
-            status: "confirmado"
-        });
-
-        if (existingOrders >= MAX_ORDERS_PER_BLOCK) {
-            return res.status(400).json({
-                message: "Bloco de horário cheio. Por favor, selecione outro horário"
-            });
-        }
+        let existingOrders = 0;
 
         if (deliveryType === "entrega") {
+            if (!date || !timeBlock) {
+                return res.status(400).json({
+                    message: "Data e horário são obrigatórios para entrega"
+                });
+            }
+
+            existingOrders = await Order.countDocuments({
+                date,
+                timeBlock,
+                status: "confirmado"
+            });
+
+            if (existingOrders >= MAX_ORDERS_PER_BLOCK) {
+                return res.status(400).json({
+                    message: "Bloco de horário cheio. Por favor, selecione outro horário"
+                });
+            }
+
             if (!address) {
-                return res.status(400).json({ message: "Endereço obrigatório para entrega" });
+                return res.status(400).json({
+                    message: "Endereço obrigatório para entrega"
+                });
             }
 
             const savedAddress = await Address.findOne({ _id: address, client: clientId });
             if (!savedAddress) {
-                return res.status(404).json({ message: "Endereço não encontrado ou não autorizado" });
-            }
-        }
-
-        for (const item of products) {
-            const productId = new mongoose.Types.ObjectId(item.product);
-            const product = await Product.findById(productId);
-            if (!product) {
-                return res.status(404).json({ message: "Produto não encontrado" });
-            }
-            if (product.stock < item.quantity) {
-                return res.status(400).json({
-                    message: `Estoque insuficiente para o produto: ${product.name}`
+                return res.status(404).json({
+                    message: "Endereço não encontrado ou não autorizado"
                 });
             }
         }
@@ -79,18 +74,10 @@ exports.createOrder = async (req, res) => {
 
         await order.save();
 
-        await User.findByIdAndUpdate(clientId, {
-            $push: { orders: order._id }
-        });
-
-        if (paymentMethod === "especie") {
-            const { confirmOrder } = require("../services/orderService");
-            await confirmOrder(order._id);
-        }
-
-        return res.status(201).json({ message: "Pedido criado com sucesso", order });
-    } catch (err) {
-        return res.status(500).json({ message: "Erro ao criar pedido", error: err.message });
+        res.status(201).json(order);
+    } catch (error) {
+        console.error("Erro ao criar pedido:", error);
+        res.status(500).json({ message: "Erro ao criar pedido" });
     }
 };
 

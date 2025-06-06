@@ -46,7 +46,8 @@ exports.createOrder = async (req, res) => {
                 });
             }
 
-            const savedAddress = await Address.findOne({ _id: address, client: clientId });
+            const addressId = typeof address === "object" ? address._id : address;
+            const savedAddress = await Address.findOne({ _id: addressId, client: clientId });
             if (!savedAddress) {
                 return res.status(404).json({
                     message: "Endereço não encontrado ou não autorizado"

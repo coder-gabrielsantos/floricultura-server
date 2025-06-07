@@ -1,5 +1,8 @@
 const mongoose = require("mongoose");
 
+/**
+ * Fixed category options
+ */
 const CATEGORIES = [
     "Arranjo Floral",
     "Buquê",
@@ -9,21 +12,25 @@ const CATEGORIES = [
     "Ramalhete"
 ];
 
+/**
+ * Product schema
+ * Represents an item available for purchase
+ */
 const productSchema = new mongoose.Schema({
     name: {
         type: String,
-        required: true
+        required: true,
     },
     price: {
         type: Number,
-        required: true
+        required: true,
     },
     stock: {
         type: Number,
-        required: true
+        required: true,
     },
     description: {
-        type: String
+        type: String,
     },
     category: {
         type: String,
@@ -32,11 +39,11 @@ const productSchema = new mongoose.Schema({
     images: [
         {
             data: Buffer,
-            contentType: String
+            contentType: String,
         }
-    ]
+    ],
 }, {
-    timestamps: true
+    timestamps: true,
 });
 
 module.exports = mongoose.model("Product", productSchema);

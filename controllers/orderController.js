@@ -1,9 +1,11 @@
 const Order = require("../models/Order");
 const Product = require("../models/Product");
 const Address = require("../models/Address");
-
 const { confirmOrder } = require("../services/orderService");
 
+/**
+ * Create a new order after validating stock, delivery info, and scheduling
+ */
 exports.createOrder = async (req, res) => {
     try {
         const clientId = req.user.userId;
@@ -20,11 +22,10 @@ exports.createOrder = async (req, res) => {
 
         const MAX_ORDERS_PER_BLOCK = 3;
 
+        // If delivery, validate date, timeBlock and address
         if (deliveryType === "entrega") {
             if (!date || !timeBlock) {
-                return res.status(400).json({
-                    message: "Data e horário são obrigatórios para entrega"
-                });
+                return res.status(400).json({ message: "Data e horário são obrigatórios para entrega." });
             }
 
             const existingOrders = await Order.countDocuments({
@@ -34,36 +35,33 @@ exports.createOrder = async (req, res) => {
             });
 
             if (existingOrders >= MAX_ORDERS_PER_BLOCK) {
-                return res.status(400).json({
-                    message: "Bloco de horário cheio. Por favor, selecione outro horário"
-                });
+                return res.status(400).json({ message: "Bloco de horário cheio. Por favor, selecione outro horário." });
             }
 
             if (!address) {
-                return res.status(400).json({
-                    message: "Endereço obrigatório para entrega"
-                });
+                return res.status(400).json({ message: "Endereço obrigatório para entrega." });
             }
 
             const addressId = typeof address === "object" ? address._id : address;
             const savedAddress = await Address.findOne({ _id: addressId, client: clientId });
             if (!savedAddress) {
-                return res.status(404).json({
-                    message: "Endereço não encontrado ou não autorizado"
-                });
+                return res.status(404).json({ message: "Endereço não encontrado ou não autorizado." });
             }
         }
 
-        // Valida e reduz o estoque
+        // Validate product stock and update it
         for (const item of products) {
             const product = await Product.findById(item.product);
             if (!product || product.stock < item.quantity) {
-                return res.status(400).json({ message: `Estoque insuficiente para o produto ${item.product}` });
+                return res.status(400).json({
+                    message: `Estoque insuficiente para o produto ${item.product}`
+                });
             }
             product.stock -= item.quantity;
             await product.save();
         }
 
+        // Create order
         const order = new Order({
             client: clientId,
             products,
@@ -82,16 +80,17 @@ exports.createOrder = async (req, res) => {
         res.status(201).json(order);
     } catch (error) {
         console.error("Erro ao criar pedido:", error);
-        res.status(500).json({ message: "Erro ao criar pedido" });
+        res.status(500).json({ message: "Erro ao criar pedido." });
     }
 };
 
+/**
+ * Get all orders - admin sees all, user sees only their own
+ */
 exports.getOrders = async (req, res) => {
     try {
         const isAdmin = req.user.role === "admin";
-        const query = isAdmin
-            ? {}
-            : { client: req.user.userId };
+        const query = isAdmin ? {} : { client: req.user.userId };
 
         const orders = await Order.find(query)
             .populate("client", "name email phone")
@@ -101,10 +100,13 @@ exports.getOrders = async (req, res) => {
 
         res.json(orders);
     } catch (err) {
-        res.status(500).json({ message: "Failed to fetch orders", error: err });
+        res.status(500).json({ message: "Erro ao buscar pedidos.", error: err });
     }
 };
 
+/**
+ * Get only the orders from the logged-in user
+ */
 exports.getMyOrders = async (req, res) => {
     try {
         const orders = await Order.find({ client: req.user.userId })
@@ -113,10 +115,13 @@ exports.getMyOrders = async (req, res) => {
 
         res.json(orders);
     } catch (err) {
-        res.status(500).json({ message: "Erro ao buscar pedidos do cliente", error: err.message });
+        res.status(500).json({ message: "Erro ao buscar seus pedidos.", error: err.message });
     }
 };
 
+/**
+ * Return available delivery time blocks for a given date
+ */
 exports.getAvailableBlocks = async (req, res) => {
     try {
         const { date } = req.query;
@@ -136,6 +141,7 @@ exports.getAvailableBlocks = async (req, res) => {
             status: { $in: ["pendente", "confirmado"] }
         });
 
+        // Filter blocks based on how many orders already exist
         const availableBlocks = allBlocks.filter((block) => {
             const count = orders.filter((o) => o.timeBlock === block).length;
             return count < MAX_ORDERS_PER_BLOCK;
@@ -144,10 +150,13 @@ exports.getAvailableBlocks = async (req, res) => {
         res.json({ availableBlocks });
     } catch (err) {
         console.error("Erro ao obter blocos disponíveis:", err);
-        res.status(500).json({ message: "Erro interno ao buscar blocos" });
+        res.status(500).json({ message: "Erro interno ao buscar blocos disponíveis." });
     }
 };
 
+/**
+ * Update the status of a given order
+ */
 exports.updateOrderStatus = async (req, res) => {
     try {
         const { id } = req.params;
@@ -155,15 +164,15 @@ exports.updateOrderStatus = async (req, res) => {
 
         const validStatuses = ["pendente", "confirmado", "cancelado", "entregue"];
         if (!validStatuses.includes(status)) {
-            return res.status(400).json({ message: "Invalid status value" });
+            return res.status(400).json({ message: "Status inválido." });
         }
 
         const order = await Order.findById(id);
         if (!order) {
-            return res.status(404).json({ message: "Order not found" });
+            return res.status(404).json({ message: "Pedido não encontrado." });
         }
 
-        // Se for confirmado, usa a lógica completa do serviço
+        // Use special logic when confirming the order
         if (status === "confirmado") {
             await confirmOrder(id);
         } else {
@@ -171,16 +180,18 @@ exports.updateOrderStatus = async (req, res) => {
             await order.save();
         }
 
-        res.json({ message: "Order status updated", order });
+        res.json({ message: "Status do pedido atualizado com sucesso.", order });
     } catch (err) {
-        res.status(500).json({ message: "Failed to update order status", error: err });
+        res.status(500).json({ message: "Erro ao atualizar status do pedido.", error: err });
     }
 };
 
-// Automatically cancel pending orders older than 15 minutes and restore stock
+/**
+ * Clean up pending orders older than 15 minutes and restore stock
+ */
 exports.cleanupPendingOrders = async (req, res) => {
     try {
-        const cutoff = new Date(Date.now() - 15 * 60 * 1000); // 15 minutos atrás
+        const cutoff = new Date(Date.now() - 15 * 60 * 1000); // 15 minutes ago
 
         const expiredOrders = await Order.find({
             status: "pendente",
@@ -188,7 +199,7 @@ exports.cleanupPendingOrders = async (req, res) => {
         });
 
         for (const order of expiredOrders) {
-            // Restaura o estoque
+            // Restore product stock
             for (const item of order.products) {
                 const product = await Product.findById(item.product);
                 if (product) {
@@ -204,6 +215,6 @@ exports.cleanupPendingOrders = async (req, res) => {
         res.json({ message: `Limpeza concluída: ${expiredOrders.length} pedidos removidos.` });
     } catch (err) {
         console.error("Erro na limpeza de pedidos:", err);
-        res.status(500).json({ error: "Erro interno na limpeza de pedidos" });
+        res.status(500).json({ message: "Erro interno na limpeza de pedidos." });
     }
 };

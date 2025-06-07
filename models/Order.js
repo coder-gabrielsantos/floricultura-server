@@ -1,29 +1,33 @@
 const mongoose = require("mongoose");
 
+/**
+ * Order schema
+ * Stores client orders including products, delivery, and status
+ */
 const orderSchema = new mongoose.Schema({
     client: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
-        required: true
+        required: true,
     },
     receiverName: {
         type: String,
-        required: true
+        required: true,
     },
     products: [
         {
             product: {
                 type: mongoose.Schema.Types.ObjectId,
-                ref: "Product"
+                ref: "Product",
             },
             quantity: {
                 type: Number,
-                required: true
-            }
+                required: true,
+            },
         }
     ],
     date: {
-        type: String
+        type: String,
     },
     timeBlock: {
         type: String,
@@ -34,33 +38,33 @@ const orderSchema = new mongoose.Schema({
             "12:00–14:00",
             "14:00–16:00",
             "16:00–18:00"
-        ]
+        ],
     },
     deliveryType: {
         type: String,
         enum: ["entrega", "retirada"],
-        required: true
+        required: true,
     },
     address: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "Address"
+        ref: "Address",
     },
     cardMessage: {
         type: String,
-        maxlength: 120
+        maxlength: 120,
     },
     paymentMethod: {
         type: String,
         enum: ["online", "especie"],
-        required: true
+        required: true,
     },
     status: {
         type: String,
         enum: ["pendente", "confirmado", "cancelado", "entregue"],
-        default: "pendente"
-    }
+        default: "pendente",
+    },
 }, {
-    timestamps: true
+    timestamps: true,
 });
 
 module.exports = mongoose.model("Order", orderSchema);

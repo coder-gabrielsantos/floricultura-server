@@ -3,18 +3,15 @@ const router = express.Router();
 const orderController = require("../controllers/orderController");
 const { verifyToken, requireAdmin } = require("../middleware/authMiddleware");
 
-// Create new order
+/**
+ * Order routes
+ * Clients: create and view orders
+ * Admin: update status, view all, cleanup
+ */
 router.post("/", verifyToken, orderController.createOrder);
-
-// Get all (admin) or personal orders (client)
 router.get("/", verifyToken, orderController.getOrders);
-
-// Get available time blocks for a given date
 router.get("/available-blocks", orderController.getAvailableBlocks);
-
-// Admin: update order status
 router.put("/:id/status", verifyToken, requireAdmin, orderController.updateOrderStatus);
-
 router.get("/cleanup-pending", orderController.cleanupPendingOrders);
 
 module.exports = router;

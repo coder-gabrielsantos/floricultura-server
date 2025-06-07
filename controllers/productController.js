@@ -3,7 +3,9 @@ const Catalog = require("../models/Catalog");
 const Cart = require("../models/Cart");
 const mongoose = require("mongoose");
 
-// Create new product (admin only)
+/**
+ * Create a new product (admin only)
+ */
 exports.createProduct = async (req, res) => {
     try {
         const {
@@ -11,11 +13,12 @@ exports.createProduct = async (req, res) => {
             price,
             stock,
             description,
-            images, // Expect array of { base64, contentType }
-            catalogs, // IDs dos catálogos selecionados
+            images, // Array of { base64, contentType }
+            catalogs, // Array of catalog IDs
             category
         } = req.body;
 
+        // Convert base64 images to buffer
         const imageBuffers = (images || []).map(img => ({
             data: Buffer.from(img.base64, "base64"),
             contentType: img.contentType
@@ -32,7 +35,7 @@ exports.createProduct = async (req, res) => {
 
         await product.save();
 
-        // Update catalogs
+        // Associate product with selected catalogs
         if (catalogs && catalogs.length > 0) {
             await Catalog.updateMany(
                 { _id: { $in: catalogs } },
@@ -40,25 +43,27 @@ exports.createProduct = async (req, res) => {
             );
         }
 
-        res.status(201).json({ message: "Product created successfully", product });
+        res.status(201).json({ message: "Produto criado com sucesso.", product });
     } catch (err) {
-        res.status(500).json({ message: "Failed to create product", error: err });
+        res.status(500).json({ message: "Erro ao criar produto.", error: err });
     }
 };
 
-// Get all products
+/**
+ * Get all products or filter by catalog ID
+ */
 exports.getAllProducts = async (req, res) => {
     try {
         const catalogId = req.query.catalog;
 
         if (catalogId) {
             if (!mongoose.Types.ObjectId.isValid(catalogId)) {
-                return res.status(400).json({ message: "Invalid catalog ID" });
+                return res.status(400).json({ message: "ID de catálogo inválido." });
             }
 
             const catalog = await Catalog.findById(catalogId);
             if (!catalog) {
-                return res.status(404).json({ message: "Catalog not found" });
+                return res.status(404).json({ message: "Catálogo não encontrado." });
             }
 
             const products = await Product.find({
@@ -71,24 +76,29 @@ exports.getAllProducts = async (req, res) => {
         const products = await Product.find().sort({ createdAt: -1 });
         res.json(products);
     } catch (err) {
-        res.status(500).json({ message: "Failed to fetch products", error: err });
+        res.status(500).json({ message: "Erro ao buscar produtos.", error: err });
     }
 };
 
-// Get product by ID
+/**
+ * Get a single product by ID
+ */
 exports.getProductById = async (req, res) => {
     try {
         const product = await Product.findById(req.params.id);
         if (!product) {
-            return res.status(404).json({ message: "Product not found" });
+            return res.status(404).json({ message: "Produto não encontrado." });
         }
+
         res.json(product);
     } catch (err) {
-        res.status(500).json({ message: "Failed to fetch product", error: err });
+        res.status(500).json({ message: "Erro ao buscar produto.", error: err });
     }
 };
 
-// Update product by ID
+/**
+ * Update product data and associated catalogs
+ */
 exports.updateProduct = async (req, res) => {
     try {
         const {
@@ -101,6 +111,7 @@ exports.updateProduct = async (req, res) => {
             category
         } = req.body;
 
+        // Convert images to buffer
         const imageBuffers = (images || []).map(img => ({
             data: Buffer.from(img.base64, "base64"),
             contentType: img.contentType
@@ -120,11 +131,12 @@ exports.updateProduct = async (req, res) => {
         );
 
         if (!updated) {
-            return res.status(404).json({ message: "Product not found" });
+            return res.status(404).json({ message: "Produto não encontrado." });
         }
 
-        // Atualizar catálogos: remover o produto de todos e adicionar nos selecionados
+        // Remove product from all catalogs and re-add to selected ones
         await Catalog.updateMany({}, { $pull: { products: updated._id } });
+
         if (catalogs && catalogs.length > 0) {
             await Catalog.updateMany(
                 { _id: { $in: catalogs } },
@@ -132,29 +144,32 @@ exports.updateProduct = async (req, res) => {
             );
         }
 
-        res.json({ message: "Product updated successfully", product: updated });
+        res.json({ message: "Produto atualizado com sucesso.", product: updated });
     } catch (err) {
-        res.status(500).json({ message: "Failed to update product", error: err });
+        res.status(500).json({ message: "Erro ao atualizar produto.", error: err });
     }
 };
 
-// Delete product
+/**
+ * Delete a product and remove it from all carts
+ */
 exports.deleteProduct = async (req, res) => {
     try {
         const { id } = req.params;
 
         const deleted = await Product.findByIdAndDelete(id);
         if (!deleted) {
-            return res.status(404).json({ message: "Product not found" });
+            return res.status(404).json({ message: "Produto não encontrado." });
         }
 
+        // Remove product from any carts
         await Cart.updateMany(
             {},
             { $pull: { items: { product: deleted._id } } }
         );
 
-        res.json({ message: "Product deleted successfully" });
+        res.json({ message: "Produto excluído com sucesso." });
     } catch (err) {
-        res.status(500).json({ message: "Failed to delete product", error: err });
+        res.status(500).json({ message: "Erro ao excluir produto.", error: err });
     }
 };

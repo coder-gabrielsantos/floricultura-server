@@ -1,21 +1,27 @@
 const mongoose = require("mongoose");
 
+/**
+ * User schema
+ * Used for authentication and role-based access
+ */
 const userSchema = new mongoose.Schema({
     name: {
         type: String,
-        required: true
+        required: true,
     },
     phone: {
-        type: String
+        type: String,
+        required: true,
     },
     password: {
         type: String,
-        required: true
+        required: true,
     },
     role: {
         type: String,
-        enum: ["client", "admin"], default: "client"
-    }
+        enum: ["client", "admin"],
+        default: "client",
+    },
 });
 
 module.exports = mongoose.model("User", userSchema);

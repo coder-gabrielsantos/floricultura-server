@@ -1,22 +1,26 @@
 const mongoose = require("mongoose");
 
+/**
+ * Catalog schema
+ * Represents a group of products with optional cover image
+ */
 const catalogSchema = new mongoose.Schema({
     name: {
         type: String,
-        required: true
+        required: true,
     },
     coverImage: {
         data: Buffer,
-        contentType: String
+        contentType: String,
     },
     products: [
         {
             type: mongoose.Schema.Types.ObjectId,
-            ref: "Product"
+            ref: "Product",
         }
-    ]
+    ],
 }, {
-    timestamps: true
+    timestamps: true,
 });
 
 module.exports = mongoose.model("Catalog", catalogSchema);

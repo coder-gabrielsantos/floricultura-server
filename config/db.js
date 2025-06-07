@@ -1,11 +1,19 @@
 const mongoose = require("mongoose");
 
+/**
+ * Connects to MongoDB depending on the environment (test or production)
+ */
 const connectDB = async () => {
     try {
-        await mongoose.connect(process.env.MONGO_URI);
-        console.log("Connected to MongoDB");
+        const uri =
+            process.env.NODE_ENV === "test"
+                ? process.env.MONGO_URI_TEST
+                : process.env.MONGO_URI;
+
+        await mongoose.connect(uri);
+        console.log("✅ Conectado ao MongoDB:", process.env.NODE_ENV || "development");
     } catch (err) {
-        console.error("Failed to connect to MongoDB:", err.message);
+        console.error("❌ Falha ao conectar no MongoDB:", err.message);
         process.exit(1);
     }
 };

@@ -10,68 +10,71 @@ const generateToken = (userId, role) => {
 // REGISTER
 exports.register = async (req, res) => {
     try {
-        const { name, identifier, password } = req.body;
+        const { name, phone, password } = req.body;
+
+        if (!name || !phone || !password) {
+            return res.status(400).json({ message: "Preencha todos os campos obrigatórios" });
+        }
+
+        const existingUser = await User.findOne({ phone });
+        if (existingUser) {
+            return res.status(400).json({ message: "Telefone já cadastrado" });
+        }
+
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        const user = new User({
+        const user = await User.create({
             name,
+            phone,
             password: hashedPassword
         });
 
-        if (identifier.includes("@")) {
-            user.email = identifier;
-        } else {
-            user.phone = identifier;
-        }
-
-        await user.save();
-
-        const token = generateToken(user._id, user.role);
+        const token = generateToken(user._id);
 
         res.status(201).json({
             _id: user._id,
             name: user.name,
-            email: user.email,
             phone: user.phone,
             role: user.role,
             token
         });
     } catch (err) {
-        res.status(500).json({ message: "Failed to register user", error: err });
+        console.error("Erro no registro:", err.message);
+        res.status(500).json({ message: "Erro ao registrar" });
     }
 };
 
 // LOGIN
 exports.login = async (req, res) => {
     try {
-        const { identifier, password } = req.body;
+        const { phone, password } = req.body;
 
-        const user = await User.findOne({
-            $or: [{ email: identifier }, { phone: identifier }]
-        });
+        if (!phone || !password) {
+            return res.status(400).json({ message: "Telefone e senha são obrigatórios" });
+        }
 
+        const user = await User.findOne({ phone });
         if (!user) {
-            return res.status(404).json({ message: "User not found" });
+            return res.status(404).json({ message: "Usuário não encontrado" });
         }
 
-        const isMatch = await bcrypt.compare(password, user.password);
-
-        if (!isMatch) {
-            return res.status(401).json({ message: "Incorrect password" });
+        const passwordMatch = await bcrypt.compare(password, user.password);
+        if (!passwordMatch) {
+            return res.status(401).json({ message: "Senha incorreta" });
         }
 
-        const token = generateToken(user._id, user.role);
+        const token = generateToken(user._id);
 
         res.json({
             _id: user._id,
             name: user.name,
-            email: user.email,
             phone: user.phone,
             role: user.role,
             token
         });
     } catch (err) {
-        res.status(500).json({ message: "Login failed", error: err });
+        console.error("Erro no login:", err.message);
+        res.status(500).json({ message: "Erro ao fazer login" });
     }
 };
 

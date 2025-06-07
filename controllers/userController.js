@@ -78,14 +78,7 @@ exports.login = async (req, res) => {
 // GET /me
 exports.getMe = async (req, res) => {
     try {
-        const user = await User.findById(req.userId)
-            .select("-password")
-            .populate({
-                path: "orders",
-                populate: {
-                    path: "products.product"
-                }
-            });
+        const user = await User.findById(req.userId).select("-password");
 
         if (!user) {
             return res.status(404).json({ message: "User not found" });

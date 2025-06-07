@@ -100,7 +100,6 @@ exports.getMe = async (req, res) => {
             phone: user.phone,
             role: user.role,
             addresses,
-            orders: user.orders
         });
     } catch (err) {
         res.status(500).json({ message: "Failed to fetch user data", error: err });

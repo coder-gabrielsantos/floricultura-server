@@ -191,7 +191,7 @@ exports.updateOrderStatus = async (req, res) => {
  */
 exports.cleanupPendingOrders = async (req, res) => {
     try {
-        const cutoff = new Date(Date.now() - 15 * 60 * 1000); // 15 minutes ago
+        const cutoff = new Date(Date.now() - 15 * 60 * 1000); // 15 minutos atrás
 
         const expiredOrders = await Order.find({
             status: "pendente",
@@ -199,7 +199,7 @@ exports.cleanupPendingOrders = async (req, res) => {
         });
 
         for (const order of expiredOrders) {
-            // Restore product stock
+            // Restaurar estoque
             for (const item of order.products) {
                 const product = await Product.findById(item.product);
                 if (product) {
@@ -208,11 +208,13 @@ exports.cleanupPendingOrders = async (req, res) => {
                 }
             }
 
-            await Order.findByIdAndDelete(order._id);
-            console.log(`🗑️ Pedido ${order._id} removido por inatividade.`);
+            // Atualizar status para cancelado
+            order.status = "cancelado";
+            await order.save();
+            console.log(`🚫 Pedido ${order._id} cancelado por inatividade.`);
         }
 
-        res.json({ message: `Limpeza concluída: ${expiredOrders.length} pedidos removidos.` });
+        res.json({ message: `Limpeza concluída: ${expiredOrders.length} pedidos cancelados.` });
     } catch (err) {
         console.error("Erro na limpeza de pedidos:", err);
         res.status(500).json({ message: "Erro interno na limpeza de pedidos." });

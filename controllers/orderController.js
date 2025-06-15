@@ -72,7 +72,7 @@ exports.createOrder = async (req, res) => {
             receiverName,
             cardMessage,
             paymentMethod,
-            status: paymentMethod === "espécie" ? "confirmado" : "pendente"
+            status: paymentMethod === "especie" ? "confirmado" : "pendente"
         });
 
         await order.save();

@@ -72,10 +72,15 @@ exports.createOrder = async (req, res) => {
             receiverName,
             cardMessage,
             paymentMethod,
-            status: paymentMethod === "especie" ? "confirmado" : "pendente"
+            status: "pendente"
         });
 
         await order.save();
+
+        // If payment method is cash, auto-confirm the order
+        if (paymentMethod === "especie") {
+            await confirmOrder(order._id);
+        }
 
         res.status(201).json(order);
     } catch (error) {

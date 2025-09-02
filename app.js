@@ -9,26 +9,18 @@ dotenv.config();
 // Create Express instance
 const app = express();
 
-// Allowed origins for CORS
-const allowedOrigins = [
-    "http://localhost:5173", // Local dev
-    "https://santateresinha.vercel.app" // Production
-];
+// CORS: allow only the production frontend
+app.use(
+    cors({
+        origin: "https://santateresinha.vercel.app",
+        methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        allowedHeaders: ["Content-Type", "Authorization"],
+        credentials: true, // keep true if using cookies/auth
+        optionsSuccessStatus: 204,
+    })
+);
 
-// CORS setup
-app.use(cors({
-    origin: function (origin, callback) {
-        if (!origin || allowedOrigins.includes(origin)) {
-            callback(null, true);
-        } else {
-            callback(new Error("Not allowed by CORS"));
-        }
-    },
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"]
-}));
-
-// Middleware
+// Middleware for parsing request bodies
 app.use(express.json({ limit: "5mb" }));
 app.use(express.urlencoded({ extended: true, limit: "5mb" }));
 

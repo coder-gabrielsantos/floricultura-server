@@ -9,16 +9,27 @@ dotenv.config();
 // Create Express instance
 const app = express();
 
-// CORS: allow only the production frontend
-app.use(
-    cors({
-        origin: "https://santateresinha.vercel.app",
-        methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        allowedHeaders: ["Content-Type", "Authorization"],
-        credentials: true, // keep true if using cookies/auth
-        optionsSuccessStatus: 204,
-    })
-);
+const allowedOrigins = [
+    'https://santateresinha.vercel.app',
+];
+
+const corsOptions = {
+    origin: (origin, cb) => {
+        if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+        return cb(new Error('Not allowed by CORS'));
+    },
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+    allowedHeaders: [
+        'Content-Type',
+        'Authorization',
+    ],
+    credentials: true,               // se for usar cookies/credenciais
+    optionsSuccessStatus: 204,       // evita 3xx/4xx em preflight
+    preflightContinue: false,
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 
 // Middleware for parsing request bodies
 app.use(express.json({ limit: "5mb" }));

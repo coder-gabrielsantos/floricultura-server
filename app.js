@@ -10,7 +10,7 @@ dotenv.config();
 const app = express();
 
 const allowedOrigins = [
-    'https://santateresinha.vercel.app',
+    'https://floricultura-client.vercel.app/',
 ];
 
 const corsOptions = {

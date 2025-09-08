@@ -6,88 +6,88 @@ const { confirmOrder } = require("../services/orderService");
 /**
  * Create a new order after validating stock, delivery info, and scheduling
  */
-exports.createOrder = async (req, res) => {
-    try {
-        const clientId = req.user.userId;
-        const {
-            products,
-            date,
-            timeBlock,
-            deliveryType,
-            address,
-            receiverName,
-            cardMessage,
-            paymentMethod
-        } = req.body;
-
-        const MAX_ORDERS_PER_BLOCK = 3;
-
-        // If delivery, validate date, timeBlock and address
-        if (deliveryType === "entrega") {
-            if (!date || !timeBlock) {
-                return res.status(400).json({ message: "Data e horário são obrigatórios para entrega." });
-            }
-
-            const existingOrders = await Order.countDocuments({
-                date,
-                timeBlock,
-                status: { $in: ["pendente", "confirmado"] }
-            });
-
-            if (existingOrders >= MAX_ORDERS_PER_BLOCK) {
-                return res.status(400).json({ message: "Bloco de horário cheio. Por favor, selecione outro horário." });
-            }
-
-            if (!address) {
-                return res.status(400).json({ message: "Endereço obrigatório para entrega." });
-            }
-
-            const addressId = typeof address === "object" ? address._id : address;
-            const savedAddress = await Address.findOne({ _id: addressId, client: clientId });
-            if (!savedAddress) {
-                return res.status(404).json({ message: "Endereço não encontrado ou não autorizado." });
-            }
-        }
-
-        // Validate product stock and update it
-        for (const item of products) {
-            const product = await Product.findById(item.product);
-            if (!product || product.stock < item.quantity) {
-                return res.status(400).json({
-                    message: `Estoque insuficiente para o produto ${item.product}`
-                });
-            }
-            product.stock -= item.quantity;
-            await product.save();
-        }
-
-        // Create order
-        const order = new Order({
-            client: clientId,
-            products,
-            date,
-            timeBlock,
-            deliveryType,
-            address: deliveryType === "entrega" ? address : null,
-            receiverName,
-            cardMessage,
-            paymentMethod,
-            status: "pendente"
-        });
-
-        await order.save();
-
-        // If payment method is cash, auto-confirm the order
-        if (paymentMethod === "especie") {
-            await confirmOrder(order._id);
-        }
-
-        res.status(201).json(order);
-    } catch (error) {
-        console.error("Erro ao criar pedido:", error);
-        res.status(500).json({ message: "Erro ao criar pedido." });
-    }
-};
+// exports.createOrder = async (req, res) => {
+//     try {
+//         const clientId = req.user.userId;
+//         const {
+//             products,
+//             date,
+//             timeBlock,
+//             deliveryType,
+//             address,
+//             receiverName,
+//             cardMessage,
+//             paymentMethod
+//         } = req.body;
+//
+//         const MAX_ORDERS_PER_BLOCK = 3;
+//
+//         // If delivery, validate date, timeBlock and address
+//         if (deliveryType === "entrega") {
+//             if (!date || !timeBlock) {
+//                 return res.status(400).json({ message: "Data e horário são obrigatórios para entrega." });
+//             }
+//
+//             const existingOrders = await Order.countDocuments({
+//                 date,
+//                 timeBlock,
+//                 status: { $in: ["pendente", "confirmado"] }
+//             });
+//
+//             if (existingOrders >= MAX_ORDERS_PER_BLOCK) {
+//                 return res.status(400).json({ message: "Bloco de horário cheio. Por favor, selecione outro horário." });
+//             }
+//
+//             if (!address) {
+//                 return res.status(400).json({ message: "Endereço obrigatório para entrega." });
+//             }
+//
+//             const addressId = typeof address === "object" ? address._id : address;
+//             const savedAddress = await Address.findOne({ _id: addressId, client: clientId });
+//             if (!savedAddress) {
+//                 return res.status(404).json({ message: "Endereço não encontrado ou não autorizado." });
+//             }
+//         }
+//
+//         // Validate product stock and update it
+//         for (const item of products) {
+//             const product = await Product.findById(item.product);
+//             if (!product || product.stock < item.quantity) {
+//                 return res.status(400).json({
+//                     message: `Estoque insuficiente para o produto ${item.product}`
+//                 });
+//             }
+//             product.stock -= item.quantity;
+//             await product.save();
+//         }
+//
+//         // Create order
+//         const order = new Order({
+//             client: clientId,
+//             products,
+//             date,
+//             timeBlock,
+//             deliveryType,
+//             address: deliveryType === "entrega" ? address : null,
+//             receiverName,
+//             cardMessage,
+//             paymentMethod,
+//             status: "pendente"
+//         });
+//
+//         await order.save();
+//
+//         // If payment method is cash, auto-confirm the order
+//         if (paymentMethod === "especie") {
+//             await confirmOrder(order._id);
+//         }
+//
+//         res.status(201).json(order);
+//     } catch (error) {
+//         console.error("Erro ao criar pedido:", error);
+//         res.status(500).json({ message: "Erro ao criar pedido." });
+//     }
+// };
 
 /**
  * Get all orders - admin sees all, user sees only their own
